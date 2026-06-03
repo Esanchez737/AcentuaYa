@@ -3,253 +3,104 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
 <title>Clase Docente</title>
-
 <style>
-
-body{
-    margin:0;
-    font-family:Arial,sans-serif;
-    background:#f5f5f5;
-}
-
-.header{
-    background:#3f51b5;
-    color:white;
-    padding:20px;
-}
-
-.card{
-    background:white;
-    margin:10px;
-    padding:15px;
-    border-radius:10px;
-    box-shadow:0 2px 5px rgba(0,0,0,.2);
-}
-
-.section-title{
-    font-weight:bold;
-    margin-bottom:10px;
-}
-
-.member{
-    padding:8px;
-    border-bottom:1px solid #eee;
-}
-
-.activity{
-    padding:10px;
-    margin-top:5px;
-    background:#fafafa;
-    border-radius:8px;
-}
-
-.btn{
-    width:100%;
-    border:none;
-    padding:12px;
-    border-radius:8px;
-    background:#3f51b5;
-    color:white;
-    font-size:16px;
-    cursor:pointer;
-}
-
-.badge{
-    display:inline-block;
-    padding:4px 8px;
-    border-radius:20px;
-    background:#e8eaf6;
-    color:#3f51b5;
-    font-size:12px;
-}
-
+body{margin:0;font-family:Arial,sans-serif;background:#f1f3f4;}
+.header{background:#1a73e8;color:white;padding:20px;}
+.card{background:white;margin:10px;padding:15px;border-radius:12px;}
+.title{font-size:22px;font-weight:bold;}
+.subtitle{margin-top:5px;}
+.member{padding:8px;border-bottom:1px solid #eee;}
+.activity{margin-top:10px;padding:10px;background:#fafafa;border-radius:8px;}
+button{width:100%;border:none;padding:12px;border-radius:8px;background:#1a73e8;color:white;font-size:16px;}
 </style>
-
 </head>
-
 <body>
 
 <div class="header">
-    <h2 id="nombreClase">Cargando...</h2>
-    <div id="codigoClase"></div>
+<div id="nombreClase" class="title">Cargando...</div>
+<div id="codigoClase" class="subtitle">Código:</div>
 </div>
 
 <div class="card">
-
-    <div class="section-title">
-        Miembros (<span id="totalMiembros">0</span>)
-    </div>
-
-    <div id="listaMiembros"></div>
-
+<h3>Miembros</h3>
+<div id="totalMiembros">0 miembros</div>
+<div id="listaMiembros"></div>
 </div>
 
 <div class="card">
-
-    <div class="section-title">
-        Actividades
-    </div>
-
-    <div id="listaActividades"></div>
-
+<h3>Actividades</h3>
+<div id="listaActividades"></div>
 </div>
 
 <div class="card">
-
-    <button class="btn" onclick="crearActividad()">
-        Crear Actividad
-    </button>
-
+<button onclick="crearActividad()">Crear Actividad</button>
 </div>
 
 <script>
-
-const firebaseURL =
-'https://appprueba-430c8-default-rtdb.firebaseio.com';
-
-const params =
-new URLSearchParams(window.location.search);
-
-const clase =
-params.get("clase") || "matematica1";
+const FIREBASE="https://acentua-ya-default-rtdb.firebaseio.com";
+const params=new URLSearchParams(window.location.search);
+const clase=params.get("clase");
 
 cargarClase();
 
 async function cargarClase(){
+ const respuesta=await fetch(`${FIREBASE}/clases/${clase}.json`);
+ const datos=await respuesta.json();
+ if(!datos){ alert("Clase no encontrada"); return; }
 
-    try{
+ document.getElementById("nombreClase").innerText=datos.nombre || "";
+ document.getElementById("codigoClase").innerText="Código: "+(datos.codigo||"");
 
-        const response = await fetch(
-            `${firebaseURL}/clases/${clase}.json`
-        );
-
-        const data = await response.json();
-
-        if(!data){
-            alert("Clase no encontrada");
-            return;
-        }
-
-        document.getElementById("nombreClase").innerText =
-            data.nombre || "Sin nombre";
-
-        document.getElementById("codigoClase").innerText =
-            "Código: " + (data.codigo || "");
-
-        cargarMiembros(data.miembros || {});
-
-        cargarActividades(data.actividades || {});
-
-    }
-    catch(error){
-
-        console.error(error);
-
-        alert("Error cargando clase");
-
-    }
-
+ cargarMiembros(datos.miembros || {});
+ cargarActividades(datos.actividades || {});
 }
 
 function cargarMiembros(miembros){
+ let html="";
+ const lista=Object.keys(miembros);
+ document.getElementById("totalMiembros").innerText=lista.length+" miembros";
 
-    let html = "";
+ lista.forEach(usuario=>{
+   html += `<div class="member">👤 ${usuario}</div>`;
+ });
 
-    const nombres = Object.keys(miembros);
-
-    document.getElementById("totalMiembros").innerText =
-        nombres.length;
-
-    nombres.forEach(nombre=>{
-
-        html += `
-        <div class="member">
-            👤 ${nombre}
-        </div>
-        `;
-
-    });
-
-    document.getElementById("listaMiembros").innerHTML =
-        html;
-
+ document.getElementById("listaMiembros").innerHTML=html;
 }
 
 function cargarActividades(actividades){
-
-    let html = "";
-
-    Object.keys(actividades).forEach(id=>{
-
-        const act = actividades[id];
-
-        html += `
-        <div class="activity">
-
-            <b>${act.titulo || ''}</b>
-
-            <br>
-
-            <span class="badge">
-                ${act.tipo || ''}
-            </span>
-
-            <br><br>
-
-            Fecha:
-            ${act.fecha || ''}
-
-        </div>
-        `;
-
-    });
-
-    document.getElementById("listaActividades").innerHTML =
-        html;
-
+ let html="";
+ Object.keys(actividades).forEach(id=>{
+   const a=actividades[id];
+   html += `<div class="activity">
+      <b>${a.titulo||""}</b><br>
+      Tipo: ${a.tipo||""}<br>
+      Fecha: ${a.fecha||""}
+   </div>`;
+ });
+ document.getElementById("listaActividades").innerHTML=html;
 }
 
-function crearActividad(){
+async function crearActividad(){
+ const titulo=prompt("Título actividad");
+ if(!titulo) return;
 
-    const titulo =
-        prompt("Título de la actividad");
+ const id="act"+Date.now();
 
-    if(!titulo) return;
+ const actividad={
+   titulo:titulo,
+   tipo:"tarea",
+   fecha:new Date().toISOString().substring(0,10)
+ };
 
-    const actividadID =
-        "act" + Date.now();
+ await fetch(`${FIREBASE}/clases/${clase}/actividades/${id}.json`,{
+   method:"PUT",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify(actividad)
+ });
 
-    const actividad = {
-
-        titulo: titulo,
-        tipo: "tarea",
-        fecha: new Date().toISOString().substring(0,10)
-
-    };
-
-    fetch(
-        `${firebaseURL}/clases/${clase}/actividades/${actividadID}.json`,
-        {
-            method:"PUT",
-            headers:{
-                "Content-Type":"application/json"
-            },
-            body:JSON.stringify(actividad)
-        }
-    )
-    .then(()=>{
-
-        alert("Actividad creada");
-
-        cargarClase();
-
-    });
-
+ cargarClase();
 }
-
 </script>
-
 </body>
 </html>
