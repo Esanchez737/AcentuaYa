@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Clase Estudiante</title>
+
+<style>
+
+body{
+    margin:0;
+    font-family:Arial,sans-serif;
+    background:#f1f3f4;
+}
+
+.header{
+    background:#0f9d58;
+    color:white;
+    padding:20px;
+}
+
+.card{
+    background:white;
+    margin:10px;
+    padding:15px;
+    border-radius:12px;
+}
+
+.activity{
+    padding:12px;
+    margin-top:10px;
+    border-left:5px solid #0f9d58;
+    background:#fafafa;
+}
+
+.badge{
+    display:inline-block;
+    padding:4px 8px;
+    border-radius:10px;
+    background:#e8f5e9;
+}
+
+.btn{
+    width:100%;
+    border:none;
+    padding:12px;
+    border-radius:8px;
+    background:#0f9d58;
+    color:white;
+    font-size:16px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="header">
+
+<h2 id="nombreClase">
+Cargando...
+</h2>
+
+<div id="codigoClase">
+Código:
+</div>
+
+</div>
+
+<div class="card">
+
+<h3>Actividades</h3>
+
+<div id="listaActividades">
+
+Cargando actividades...
+
+</div>
+
+</div>
+
+<div class="card">
+
+<button class="btn" onclick="cargarClase()">
+
+Actualizar
+
+</button>
+
+</div>
+
+<script>
+
+const FIREBASE =
+"https://acentua-ya-default-rtdb.firebaseio.com";
+
+const params =
+new URLSearchParams(window.location.search);
+
+const clase =
+params.get("clase");
+
+cargarClase();
+
+async function cargarClase(){
+
+    try{
+
+        const response =
+        await fetch(
+        `${FIREBASE}/clases/${clase}.json`
+        );
+
+        const data =
+        await response.json();
+
+        if(!data){
+
+            alert("Clase no encontrada");
+
+            return;
+
+        }
+
+        document.getElementById(
+            "nombreClase"
+        ).innerText =
+        data.nombre || "Sin nombre";
+
+        document.getElementById(
+            "codigoClase"
+        ).innerText =
+        "Código: " +
+        (data.codigo || "");
+
+        cargarActividades(
+            data.actividades || {}
+        );
+
+    }
+    catch(error){
+
+        console.error(error);
+
+        alert(
+            "Error cargando clase"
+        );
+
+    }
+
+}
+
+function cargarActividades(actividades){
+
+    let html = "";
+
+    const lista =
+    Object.keys(actividades);
+
+    if(lista.length === 0){
+
+        html =
+        "<p>No hay actividades disponibles.</p>";
+
+    }
+
+    lista.forEach(id=>{
+
+        const act =
+        actividades[id];
+
+        html += `
+        <div class="activity">
+
+            <b>
+            ${act.titulo || ""}
+            </b>
+
+            <br><br>
+
+            <span class="badge">
+            ${act.tipo || ""}
+            </span>
+
+            <br><br>
+
+            ${act.descripcion || ""}
+
+            <br><br>
+
+            Fecha:
+            ${act.fecha || ""}
+
+        </div>
+        `;
+
+    });
+
+    document.getElementById(
+        "listaActividades"
+    ).innerHTML =
+    html;
+
+}
+
+</script>
+
+</body>
+</html>
