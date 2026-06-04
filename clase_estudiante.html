@@ -4,206 +4,238 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>Clase Estudiante</title>
+<title>Clase Estudiante - Tests</title>
 
 <style>
-
-body{
-    margin:0;
-    font-family:Arial,sans-serif;
-    background:#f1f3f4;
-}
-
-.header{
-    background:#0f9d58;
-    color:white;
-    padding:20px;
-}
-
-.card{
-    background:white;
-    margin:10px;
-    padding:15px;
-    border-radius:12px;
-}
-
-.activity{
-    padding:12px;
-    margin-top:10px;
-    border-left:5px solid #0f9d58;
-    background:#fafafa;
-}
-
-.badge{
-    display:inline-block;
-    padding:4px 8px;
-    border-radius:10px;
-    background:#e8f5e9;
-}
-
-.btn{
-    width:100%;
-    border:none;
-    padding:12px;
-    border-radius:8px;
-    background:#0f9d58;
-    color:white;
-    font-size:16px;
-}
-
+body{margin:0;font-family:Arial,sans-serif;background:#f1f3f4;color:#202124}
+.header{background:#0f9d58;color:white;padding:20px}
+.card{background:white;margin:10px;padding:15px;border-radius:12px}
+.activity,.pregunta{padding:12px;margin-top:10px;border-left:5px solid #0f9d58;background:#fafafa;border-radius:8px}
+.badge{display:inline-block;padding:4px 8px;border-radius:10px;background:#e8f5e9;color:#0f9d58}
+.btn{width:100%;border:none;padding:12px;border-radius:8px;background:#0f9d58;color:white;font-size:16px;margin-top:10px}
+.btn-sec{background:#5f6368}
+.oculto{display:none}
+.opcion{display:block;margin:8px 0}
+.resultado{font-size:18px;font-weight:bold;color:#0f9d58}
 </style>
 </head>
 
 <body>
 
 <div class="header">
-
-<h2 id="nombreClase">
-Cargando...
-</h2>
-
-<div id="codigoClase">
-Código:
+<h2 id="nombreClase">Cargando...</h2>
+<div id="codigoClase">Código:</div>
+<div id="usuarioActual"></div>
 </div>
 
+<div id="vistaActividades" class="card">
+<h3>Tests disponibles</h3>
+<div id="listaActividades">Cargando tests...</div>
+<button class="btn" onclick="cargarClase()">Actualizar</button>
 </div>
 
-<div class="card">
-
-<h3>Actividades</h3>
-
-<div id="listaActividades">
-
-Cargando actividades...
-
+<div id="vistaTest" class="card oculto">
+<h3 id="tituloTest"></h3>
+<div id="contenedorPreguntas"></div>
+<button class="btn" onclick="enviarRespuestas()">Enviar respuestas</button>
+<button class="btn btn-sec" onclick="volverALista()">Volver</button>
 </div>
 
-</div>
-
-<div class="card">
-
-<button class="btn" onclick="cargarClase()">
-
-Actualizar
-
-</button>
-
+<div id="vistaResultado" class="card oculto">
+<h3>Resultado</h3>
+<div id="resultadoFinal" class="resultado"></div>
+<button class="btn" onclick="volverALista()">Volver a tests</button>
 </div>
 
 <script>
+const FIREBASE="https://acentua-ya-default-rtdb.firebaseio.com";
 
-const FIREBASE =
-"https://acentua-ya-default-rtdb.firebaseio.com";
+const params=new URLSearchParams(window.location.search);
 
-const params =
-new URLSearchParams(window.location.search);
+const clase=params.get("clase");
+const usuario=params.get("usuario") || "Estudiante";
 
-const clase =
-params.get("clase");
+let actividadesGlobales={};
+let testActual=null;
+let testActualId=null;
+
+document.getElementById("usuarioActual").innerText="Estudiante: "+usuario;
 
 cargarClase();
 
 async function cargarClase(){
-
     try{
-
-        const response =
-        await fetch(
-        `${FIREBASE}/clases/${clase}.json`
-        );
-
-        const data =
-        await response.json();
+        const response=await fetch(`${FIREBASE}/clases/${clase}.json`);
+        const data=await response.json();
 
         if(!data){
-
             alert("Clase no encontrada");
-
             return;
-
         }
 
-        document.getElementById(
-            "nombreClase"
-        ).innerText =
-        data.nombre || "Sin nombre";
+        document.getElementById("nombreClase").innerText=data.nombre || clase;
+        document.getElementById("codigoClase").innerText="Código: "+(data.codigo || "");
 
-        document.getElementById(
-            "codigoClase"
-        ).innerText =
-        "Código: " +
-        (data.codigo || "");
+        actividadesGlobales=data.actividades || {};
+        cargarActividades(actividadesGlobales);
 
-        cargarActividades(
-            data.actividades || {}
-        );
-
-    }
-    catch(error){
-
+    }catch(error){
         console.error(error);
-
-        alert(
-            "Error cargando clase"
-        );
-
+        alert("Error cargando clase");
     }
-
 }
 
 function cargarActividades(actividades){
+    let html="";
+    const lista=Object.keys(actividades);
 
-    let html = "";
-
-    const lista =
-    Object.keys(actividades);
-
-    if(lista.length === 0){
-
-        html =
-        "<p>No hay actividades disponibles.</p>";
-
+    if(lista.length===0){
+        document.getElementById("listaActividades").innerHTML="<p>No hay tests disponibles.</p>";
+        return;
     }
 
     lista.forEach(id=>{
+        const act=actividades[id];
 
-        const act =
-        actividades[id];
+        if(act.tipo!=="test"){
+            return;
+        }
 
-        html += `
+        const totalPreguntas=act.preguntas ? Object.keys(act.preguntas).length : 0;
+
+        html+=`
         <div class="activity">
-
-            <b>
-            ${act.titulo || ""}
-            </b>
-
+            <b>${act.titulo || "Sin título"}</b>
             <br><br>
-
-            <span class="badge">
-            ${act.tipo || ""}
-            </span>
-
+            <span class="badge">Test</span>
             <br><br>
-
-            ${act.descripcion || ""}
-
-            <br><br>
-
-            Fecha:
-            ${act.fecha || ""}
-
-        </div>
-        `;
-
+            Preguntas: ${totalPreguntas}
+            <br>
+            Fecha: ${act.fecha || ""}
+            <button class="btn" onclick="abrirTest('${id}')">
+                Resolver test
+            </button>
+        </div>`;
     });
 
-    document.getElementById(
-        "listaActividades"
-    ).innerHTML =
-    html;
-
+    document.getElementById("listaActividades").innerHTML=html || "<p>No hay tests disponibles.</p>";
 }
 
+function abrirTest(id){
+    testActualId=id;
+    testActual=actividadesGlobales[id];
+
+    document.getElementById("vistaActividades").classList.add("oculto");
+    document.getElementById("vistaResultado").classList.add("oculto");
+    document.getElementById("vistaTest").classList.remove("oculto");
+
+    document.getElementById("tituloTest").innerText=testActual.titulo || "Test";
+
+    mostrarPreguntas();
+}
+
+function mostrarPreguntas(){
+    const preguntas=testActual.preguntas || {};
+    let html="";
+
+    Object.keys(preguntas).forEach((idPregunta,index)=>{
+        const p=preguntas[idPregunta];
+
+        html+=`
+        <div class="pregunta">
+            <b>${index+1}. ${p.pregunta}</b>
+            <br><br>`;
+
+        if(p.tipo==="vf"){
+            html+=`
+            <label class="opcion">
+                <input type="radio" name="${idPregunta}" value="verdadero">
+                Verdadero
+            </label>
+            <label class="opcion">
+                <input type="radio" name="${idPregunta}" value="falso">
+                Falso
+            </label>`;
+        }
+
+        if(p.tipo==="opcion"){
+            html+=`
+            <label class="opcion">
+                <input type="radio" name="${idPregunta}" value="a">
+                A) ${p.opciones?.a || ""}
+            </label>
+            <label class="opcion">
+                <input type="radio" name="${idPregunta}" value="b">
+                B) ${p.opciones?.b || ""}
+            </label>
+            <label class="opcion">
+                <input type="radio" name="${idPregunta}" value="c">
+                C) ${p.opciones?.c || ""}
+            </label>
+            <label class="opcion">
+                <input type="radio" name="${idPregunta}" value="d">
+                D) ${p.opciones?.d || ""}
+            </label>`;
+        }
+
+        html+="</div>";
+    });
+
+    document.getElementById("contenedorPreguntas").innerHTML=html;
+}
+
+async function enviarRespuestas(){
+    const preguntas=testActual.preguntas || {};
+    let respuestas={};
+    let correctas=0;
+    let total=Object.keys(preguntas).length;
+
+    for(const idPregunta of Object.keys(preguntas)){
+        const seleccion=document.querySelector(`input[name="${idPregunta}"]:checked`);
+
+        if(!seleccion){
+            alert("Debe responder todas las preguntas");
+            return;
+        }
+
+        respuestas[idPregunta]=seleccion.value;
+
+        if(seleccion.value===preguntas[idPregunta].respuesta){
+            correctas++;
+        }
+    }
+
+    const puntaje=Math.round((correctas/total)*100);
+
+    const resultado={
+        usuario:usuario,
+        respuestas:respuestas,
+        correctas:correctas,
+        total:total,
+        puntaje:puntaje,
+        fecha:new Date().toISOString().substring(0,10)
+    };
+
+    await fetch(`${FIREBASE}/resultados/${clase}/${testActualId}/${usuario}.json`,{
+        method:"PUT",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(resultado)
+    });
+
+    document.getElementById("vistaTest").classList.add("oculto");
+    document.getElementById("vistaResultado").classList.remove("oculto");
+
+    document.getElementById("resultadoFinal").innerHTML=
+    `Correctas: ${correctas} / ${total}<br>Puntaje: ${puntaje}%`;
+}
+
+function volverALista(){
+    document.getElementById("vistaTest").classList.add("oculto");
+    document.getElementById("vistaResultado").classList.add("oculto");
+    document.getElementById("vistaActividades").classList.remove("oculto");
+
+    cargarClase();
+}
 </script>
 
 </body>
