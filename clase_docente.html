@@ -3,38 +3,102 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Clase Docente</title>
+<title>Clase Docente - Tests</title>
+
 <style>
-body{margin:0;font-family:Arial,sans-serif;background:#f1f3f4;}
-.header{background:#1a73e8;color:white;padding:20px;}
-.card{background:white;margin:10px;padding:15px;border-radius:12px;}
-.title{font-size:22px;font-weight:bold;}
-.subtitle{margin-top:5px;}
-.member{padding:8px;border-bottom:1px solid #eee;}
-.activity{margin-top:10px;padding:10px;background:#fafafa;border-radius:8px;}
-button{width:100%;border:none;padding:12px;border-radius:8px;background:#1a73e8;color:white;font-size:16px;}
+body{margin:0;font-family:Arial,sans-serif;background:#f1f3f4;color:#202124}
+.header{background:#1a73e8;color:white;padding:20px}
+.title{font-size:22px;font-weight:bold}
+.subtitle{margin-top:5px}
+.card{background:white;margin:10px;padding:15px;border-radius:12px}
+.member,.activity,.pregunta-item{padding:10px;border-bottom:1px solid #eee}
+button{width:100%;border:none;padding:12px;border-radius:8px;background:#1a73e8;color:white;font-size:16px;margin-top:8px}
+button.secundario{background:#5f6368}
+button.peligro{background:#d93025}
+input,textarea,select{width:100%;box-sizing:border-box;padding:10px;margin-top:6px;margin-bottom:10px;border:1px solid #ccc;border-radius:8px;font-size:15px}
+textarea{min-height:70px}
+.oculto{display:none}
+.badge{display:inline-block;padding:3px 8px;border-radius:10px;background:#e8f0fe;color:#1a73e8;font-size:13px}
+.small{font-size:13px;color:#5f6368}
 </style>
 </head>
+
 <body>
 
 <div class="header">
-<div id="nombreClase" class="title">Cargando...</div>
-<div id="codigoClase" class="subtitle">Código:</div>
+  <div id="nombreClase" class="title">Cargando...</div>
+  <div id="codigoClase" class="subtitle">Código:</div>
 </div>
 
 <div class="card">
-<h3>Miembros</h3>
-<div id="totalMiembros">0 miembros</div>
-<div id="listaMiembros"></div>
+  <h3>👥 Miembros</h3>
+  <div id="totalMiembros">0 miembros</div>
+  <div id="listaMiembros"></div>
 </div>
 
 <div class="card">
-<h3>Actividades</h3>
-<div id="listaActividades"></div>
+  <h3>📝 Tests creados</h3>
+  <div id="listaActividades"></div>
 </div>
 
 <div class="card">
-<button onclick="crearActividad()">Crear Actividad</button>
+  <button onclick="mostrarFormularioTest()">Crear Test</button>
+</div>
+
+<div id="formularioTest" class="card oculto">
+  <h3>Crear nuevo test</h3>
+
+  <label>Título del test</label>
+  <input id="tituloTest" type="text" placeholder="Ejemplo: Quiz de Química">
+
+  <h4>Agregar pregunta</h4>
+
+  <label>Tipo de pregunta</label>
+  <select id="tipoPregunta" onchange="cambiarTipoPregunta()">
+    <option value="vf">Verdadero / Falso</option>
+    <option value="opcion">Opción múltiple</option>
+  </select>
+
+  <label>Pregunta</label>
+  <textarea id="textoPregunta" placeholder="Escriba la pregunta"></textarea>
+
+  <div id="bloqueVF">
+    <label>Respuesta correcta</label>
+    <select id="respuestaVF">
+      <option value="verdadero">Verdadero</option>
+      <option value="falso">Falso</option>
+    </select>
+  </div>
+
+  <div id="bloqueOpcion" class="oculto">
+    <label>Opción A</label>
+    <input id="opcionA" type="text">
+
+    <label>Opción B</label>
+    <input id="opcionB" type="text">
+
+    <label>Opción C</label>
+    <input id="opcionC" type="text">
+
+    <label>Opción D</label>
+    <input id="opcionD" type="text">
+
+    <label>Respuesta correcta</label>
+    <select id="respuestaOpcion">
+      <option value="a">A</option>
+      <option value="b">B</option>
+      <option value="c">C</option>
+      <option value="d">D</option>
+    </select>
+  </div>
+
+  <button onclick="agregarPregunta()">Agregar Pregunta</button>
+
+  <h4>Preguntas agregadas</h4>
+  <div id="listaPreguntasTemporales"></div>
+
+  <button onclick="guardarTest()">Guardar Test</button>
+  <button class="secundario" onclick="cancelarTest()">Cancelar</button>
 </div>
 
 <script>
@@ -42,65 +106,201 @@ const FIREBASE="https://acentua-ya-default-rtdb.firebaseio.com";
 const params=new URLSearchParams(window.location.search);
 const clase=params.get("clase");
 
+let preguntasTemporales=[];
+
 cargarClase();
 
 async function cargarClase(){
- const respuesta=await fetch(`${FIREBASE}/clases/${clase}.json`);
- const datos=await respuesta.json();
- if(!datos){ alert("Clase no encontrada"); return; }
+  const respuesta=await fetch(`${FIREBASE}/clases/${clase}.json`);
+  const datos=await respuesta.json();
 
- document.getElementById("nombreClase").innerText=datos.nombre || "";
- document.getElementById("codigoClase").innerText="Código: "+(datos.codigo||"");
+  if(!datos){
+    alert("Clase no encontrada");
+    return;
+  }
 
- cargarMiembros(datos.miembros || {});
- cargarActividades(datos.actividades || {});
+  document.getElementById("nombreClase").innerText=datos.nombre || clase;
+  document.getElementById("codigoClase").innerText="Código: "+(datos.codigo||"");
+
+  cargarMiembros(datos.miembros || {});
+  cargarActividades(datos.actividades || {});
 }
 
 function cargarMiembros(miembros){
- let html="";
- const lista=Object.keys(miembros);
- document.getElementById("totalMiembros").innerText=lista.length+" miembros";
+  const lista=Object.keys(miembros);
+  document.getElementById("totalMiembros").innerText=lista.length+" miembros";
 
- lista.forEach(usuario=>{
-   html += `<div class="member">👤 ${usuario}</div>`;
- });
+  let html="";
+  lista.forEach(usuario=>{
+    html+=`<div class="member">👤 ${usuario}</div>`;
+  });
 
- document.getElementById("listaMiembros").innerHTML=html;
+  document.getElementById("listaMiembros").innerHTML=html || "<p>No hay miembros todavía.</p>";
 }
 
 function cargarActividades(actividades){
- let html="";
- Object.keys(actividades).forEach(id=>{
-   const a=actividades[id];
-   html += `<div class="activity">
-      <b>${a.titulo||""}</b><br>
-      Tipo: ${a.tipo||""}<br>
-      Fecha: ${a.fecha||""}
-   </div>`;
- });
- document.getElementById("listaActividades").innerHTML=html;
+  let html="";
+  const ids=Object.keys(actividades);
+
+  if(ids.length===0){
+    document.getElementById("listaActividades").innerHTML="<p>No hay tests creados.</p>";
+    return;
+  }
+
+  ids.forEach(id=>{
+    const a=actividades[id];
+    const totalPreguntas=a.preguntas ? Object.keys(a.preguntas).length : 0;
+
+    html+=`
+    <div class="activity">
+      <b>${a.titulo || "Sin título"}</b><br>
+      <span class="badge">${a.tipo || "test"}</span><br>
+      <span class="small">${totalPreguntas} preguntas</span><br>
+      Fecha: ${a.fecha || ""}
+    </div>`;
+  });
+
+  document.getElementById("listaActividades").innerHTML=html;
 }
 
-async function crearActividad(){
- const titulo=prompt("Título actividad");
- if(!titulo) return;
+function mostrarFormularioTest(){
+  preguntasTemporales=[];
+  document.getElementById("formularioTest").classList.remove("oculto");
+  document.getElementById("tituloTest").value="";
+  limpiarFormularioPregunta();
+  mostrarPreguntasTemporales();
+}
 
- const id="act"+Date.now();
+function cancelarTest(){
+  document.getElementById("formularioTest").classList.add("oculto");
+  preguntasTemporales=[];
+}
 
- const actividad={
-   titulo:titulo,
-   tipo:"tarea",
-   fecha:new Date().toISOString().substring(0,10)
- };
+function cambiarTipoPregunta(){
+  const tipo=document.getElementById("tipoPregunta").value;
 
- await fetch(`${FIREBASE}/clases/${clase}/actividades/${id}.json`,{
-   method:"PUT",
-   headers:{"Content-Type":"application/json"},
-   body:JSON.stringify(actividad)
- });
+  if(tipo==="vf"){
+    document.getElementById("bloqueVF").classList.remove("oculto");
+    document.getElementById("bloqueOpcion").classList.add("oculto");
+  }else{
+    document.getElementById("bloqueVF").classList.add("oculto");
+    document.getElementById("bloqueOpcion").classList.remove("oculto");
+  }
+}
 
- cargarClase();
+function agregarPregunta(){
+  const tipo=document.getElementById("tipoPregunta").value;
+  const pregunta=document.getElementById("textoPregunta").value.trim();
+
+  if(!pregunta){
+    alert("Escriba la pregunta");
+    return;
+  }
+
+  let nuevaPregunta={};
+
+  if(tipo==="vf"){
+    nuevaPregunta={
+      tipo:"vf",
+      pregunta:pregunta,
+      respuesta:document.getElementById("respuestaVF").value
+    };
+  }else{
+    const a=document.getElementById("opcionA").value.trim();
+    const b=document.getElementById("opcionB").value.trim();
+    const c=document.getElementById("opcionC").value.trim();
+    const d=document.getElementById("opcionD").value.trim();
+
+    if(!a || !b || !c || !d){
+      alert("Complete las 4 opciones");
+      return;
+    }
+
+    nuevaPregunta={
+      tipo:"opcion",
+      pregunta:pregunta,
+      opciones:{a:a,b:b,c:c,d:d},
+      respuesta:document.getElementById("respuestaOpcion").value
+    };
+  }
+
+  preguntasTemporales.push(nuevaPregunta);
+  limpiarFormularioPregunta();
+  mostrarPreguntasTemporales();
+}
+
+function limpiarFormularioPregunta(){
+  document.getElementById("textoPregunta").value="";
+  document.getElementById("opcionA").value="";
+  document.getElementById("opcionB").value="";
+  document.getElementById("opcionC").value="";
+  document.getElementById("opcionD").value="";
+}
+
+function mostrarPreguntasTemporales(){
+  let html="";
+
+  if(preguntasTemporales.length===0){
+    document.getElementById("listaPreguntasTemporales").innerHTML="<p>No hay preguntas agregadas.</p>";
+    return;
+  }
+
+  preguntasTemporales.forEach((p,index)=>{
+    html+=`
+    <div class="pregunta-item">
+      <b>${index+1}. ${p.pregunta}</b><br>
+      Tipo: ${p.tipo==="vf" ? "Verdadero/Falso" : "Opción múltiple"}<br>
+      Correcta: ${p.respuesta}<br>
+      <button class="peligro" onclick="eliminarPregunta(${index})">Eliminar</button>
+    </div>`;
+  });
+
+  document.getElementById("listaPreguntasTemporales").innerHTML=html;
+}
+
+function eliminarPregunta(index){
+  preguntasTemporales.splice(index,1);
+  mostrarPreguntasTemporales();
+}
+
+async function guardarTest(){
+  const titulo=document.getElementById("tituloTest").value.trim();
+
+  if(!titulo){
+    alert("Escriba el título del test");
+    return;
+  }
+
+  if(preguntasTemporales.length===0){
+    alert("Agregue al menos una pregunta");
+    return;
+  }
+
+  const id="test"+Date.now();
+  const preguntas={};
+
+  preguntasTemporales.forEach((p,index)=>{
+    preguntas["p"+(index+1)]=p;
+  });
+
+  const test={
+    titulo:titulo,
+    tipo:"test",
+    fecha:new Date().toISOString().substring(0,10),
+    preguntas:preguntas
+  };
+
+  await fetch(`${FIREBASE}/clases/${clase}/actividades/${id}.json`,{
+    method:"PUT",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(test)
+  });
+
+  alert("Test guardado correctamente");
+  cancelarTest();
+  cargarClase();
 }
 </script>
+
 </body>
 </html>
