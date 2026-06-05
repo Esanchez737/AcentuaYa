@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Clase Docente - Tests</title>
+
+<title>Clase Docente</title>
 
 <style>
 body{margin:0;font-family:Arial,sans-serif;background:#f1f3f4;color:#202124}
@@ -11,15 +12,18 @@ body{margin:0;font-family:Arial,sans-serif;background:#f1f3f4;color:#202124}
 .title{font-size:22px;font-weight:bold}
 .subtitle{margin-top:5px}
 .card{background:white;margin:10px;padding:15px;border-radius:12px}
-.member,.activity,.pregunta-item{padding:10px;border-bottom:1px solid #eee}
+.member,.activity,.pregunta-item,.resultado-item{padding:10px;border-bottom:1px solid #eee}
 button{width:100%;border:none;padding:12px;border-radius:8px;background:#1a73e8;color:white;font-size:16px;margin-top:8px}
 button.secundario{background:#5f6368}
 button.peligro{background:#d93025}
+button.verde{background:#188038}
 input,textarea,select{width:100%;box-sizing:border-box;padding:10px;margin-top:6px;margin-bottom:10px;border:1px solid #ccc;border-radius:8px;font-size:15px}
 textarea{min-height:70px}
 .oculto{display:none}
 .badge{display:inline-block;padding:3px 8px;border-radius:10px;background:#e8f0fe;color:#1a73e8;font-size:13px}
 .small{font-size:13px;color:#5f6368}
+.resultado-box{background:#f8fafd;border-left:5px solid #1a73e8;margin-top:10px;padding:12px;border-radius:8px}
+.promedio{font-size:20px;font-weight:bold;color:#1a73e8}
 </style>
 </head>
 
@@ -45,7 +49,14 @@ textarea{min-height:70px}
   <button onclick="mostrarFormularioTest()">Crear Test</button>
 </div>
 
+<div id="panelResultados" class="card oculto">
+  <h3 id="tituloResultados">Resultados</h3>
+  <div id="contenidoResultados"></div>
+  <button class="secundario" onclick="cerrarResultados()">Cerrar resultados</button>
+</div>
+
 <div id="formularioTest" class="card oculto">
+
   <h3>Crear nuevo test</h3>
 
   <label>Título del test</label>
@@ -99,6 +110,7 @@ textarea{min-height:70px}
 
   <button onclick="guardarTest()">Guardar Test</button>
   <button class="secundario" onclick="cancelarTest()">Cancelar</button>
+
 </div>
 
 <script>
@@ -149,7 +161,13 @@ function cargarActividades(actividades){
 
   ids.forEach(id=>{
     const a=actividades[id];
+
+    if(a.tipo !== "test"){
+      return;
+    }
+
     const totalPreguntas=a.preguntas ? Object.keys(a.preguntas).length : 0;
+    const tituloSeguro=(a.titulo || "Test").replace(/'/g,"");
 
     html+=`
     <div class="activity">
@@ -157,10 +175,73 @@ function cargarActividades(actividades){
       <span class="badge">${a.tipo || "test"}</span><br>
       <span class="small">${totalPreguntas} preguntas</span><br>
       Fecha: ${a.fecha || ""}
+
+      <button class="verde" onclick="verResultados('${id}','${tituloSeguro}')">
+        Ver Resultados
+      </button>
     </div>`;
   });
 
-  document.getElementById("listaActividades").innerHTML=html;
+  document.getElementById("listaActividades").innerHTML=html || "<p>No hay tests creados.</p>";
+}
+
+async function verResultados(testId,titulo){
+
+  const respuesta=await fetch(`${FIREBASE}/resultados/${clase}/${testId}.json`);
+  const datos=await respuesta.json();
+
+  document.getElementById("panelResultados").classList.remove("oculto");
+  document.getElementById("tituloResultados").innerText="Resultados: "+titulo;
+
+  if(!datos){
+    document.getElementById("contenidoResultados").innerHTML=
+    "<p>Nadie ha respondido este test todavía.</p>";
+    return;
+  }
+
+  let html="";
+  let suma=0;
+  let cantidad=0;
+  let mejor=-1;
+  let peor=101;
+
+  Object.keys(datos).forEach(usuario=>{
+    const r=datos[usuario];
+    const puntaje=Number(r.puntaje || 0);
+
+    suma+=puntaje;
+    cantidad++;
+
+    if(puntaje>mejor) mejor=puntaje;
+    if(puntaje<peor) peor=puntaje;
+
+    html+=`
+    <div class="resultado-item">
+      👤 <b>${usuario}</b><br>
+      Puntaje: <b>${puntaje}%</b><br>
+      Correctas: ${r.correctas || 0} / ${r.total || 0}<br>
+      Fecha: ${r.fecha || ""}
+    </div>`;
+  });
+
+  const promedio=Math.round(suma/cantidad);
+
+  document.getElementById("contenidoResultados").innerHTML=
+  `
+  <div class="resultado-box">
+    <div class="promedio">Promedio del grupo: ${promedio}%</div>
+    <br>
+    Respondieron: ${cantidad}<br>
+    Mejor nota: ${mejor}%<br>
+    Menor nota: ${peor}%
+  </div>
+  <br>
+  ${html}
+  `;
+}
+
+function cerrarResultados(){
+  document.getElementById("panelResultados").classList.add("oculto");
 }
 
 function mostrarFormularioTest(){
@@ -235,6 +316,8 @@ function limpiarFormularioPregunta(){
   document.getElementById("opcionB").value="";
   document.getElementById("opcionC").value="";
   document.getElementById("opcionD").value="";
+  document.getElementById("respuestaVF").value="verdadero";
+  document.getElementById("respuestaOpcion").value="a";
 }
 
 function mostrarPreguntasTemporales(){
