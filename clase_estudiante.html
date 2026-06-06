@@ -14,6 +14,7 @@ body{margin:0;font-family:Arial,sans-serif;background:#f1f3f4;color:#202124}
 .badge{display:inline-block;padding:4px 8px;border-radius:10px;background:#e8f5e9;color:#0f9d58}
 .btn{width:100%;border:none;padding:12px;border-radius:8px;background:#0f9d58;color:white;font-size:16px;margin-top:10px}
 .btn-sec{background:#5f6368}
+button:disabled{background:#9aa0a6}
 .oculto{display:none}
 .opcion{display:block;margin:8px 0}
 .resultado{font-size:18px;font-weight:bold;color:#0f9d58}
@@ -49,7 +50,6 @@ body{margin:0;font-family:Arial,sans-serif;background:#f1f3f4;color:#202124}
 
 <script>
 const FIREBASE="https://acentua-ya-default-rtdb.firebaseio.com";
-
 const params=new URLSearchParams(window.location.search);
 
 const clase=params.get("clase");
@@ -77,7 +77,7 @@ async function cargarClase(){
         document.getElementById("codigoClase").innerText="Código: "+(data.codigo || "");
 
         actividadesGlobales=data.actividades || {};
-        cargarActividades(actividadesGlobales);
+        await cargarActividades(actividadesGlobales);
 
     }catch(error){
         console.error(error);
@@ -85,7 +85,7 @@ async function cargarClase(){
     }
 }
 
-function cargarActividades(actividades){
+async function cargarActividades(actividades){
     let html="";
     const lista=Object.keys(actividades);
 
@@ -94,29 +94,50 @@ function cargarActividades(actividades){
         return;
     }
 
-    lista.forEach(id=>{
+    for(const id of lista){
         const act=actividades[id];
 
         if(act.tipo!=="test"){
-            return;
+            continue;
         }
 
         const totalPreguntas=act.preguntas ? Object.keys(act.preguntas).length : 0;
 
-        html+=`
-        <div class="activity">
-            <b>${act.titulo || "Sin título"}</b>
-            <br><br>
-            <span class="badge">Test</span>
-            <br><br>
-            Preguntas: ${totalPreguntas}
-            <br>
-            Fecha: ${act.fecha || ""}
-            <button class="btn" onclick="abrirTest('${id}')">
-                Resolver test
-            </button>
-        </div>`;
-    });
+        const resultadoResponse=await fetch(`${FIREBASE}/resultados/${clase}/${id}/${usuario}.json`);
+        const resultado=await resultadoResponse.json();
+
+        if(resultado){
+            html+=`
+            <div class="activity">
+                <b>${act.titulo || "Sin título"}</b>
+                <br><br>
+                <span class="badge">Test realizado</span>
+                <br><br>
+                Preguntas: ${totalPreguntas}
+                <br>
+                Fecha: ${act.fecha || ""}
+                <br><br>
+                <b>Tu puntaje: ${resultado.puntaje}%</b>
+                <br>
+                Correctas: ${resultado.correctas} / ${resultado.total}
+                <br><br>
+                <button class="btn btn-sec" disabled>Ya realizado</button>
+            </div>`;
+        }else{
+            html+=`
+            <div class="activity">
+                <b>${act.titulo || "Sin título"}</b>
+                <br><br>
+                <span class="badge">Test</span>
+                <br><br>
+                Preguntas: ${totalPreguntas}
+                <br>
+                Fecha: ${act.fecha || ""}
+
+                <button class="btn" onclick="abrirTest('${id}')">Resolver test</button>
+            </div>`;
+        }
+    }
 
     document.getElementById("listaActividades").innerHTML=html || "<p>No hay tests disponibles.</p>";
 }
@@ -159,22 +180,27 @@ function mostrarPreguntas(){
         }
 
         if(p.tipo==="opcion"){
+            const opA=(p.opciones && p.opciones.a) ? p.opciones.a : "";
+            const opB=(p.opciones && p.opciones.b) ? p.opciones.b : "";
+            const opC=(p.opciones && p.opciones.c) ? p.opciones.c : "";
+            const opD=(p.opciones && p.opciones.d) ? p.opciones.d : "";
+
             html+=`
             <label class="opcion">
                 <input type="radio" name="${idPregunta}" value="a">
-                A) ${p.opciones?.a || ""}
+                A) ${opA}
             </label>
             <label class="opcion">
                 <input type="radio" name="${idPregunta}" value="b">
-                B) ${p.opciones?.b || ""}
+                B) ${opB}
             </label>
             <label class="opcion">
                 <input type="radio" name="${idPregunta}" value="c">
-                C) ${p.opciones?.c || ""}
+                C) ${opC}
             </label>
             <label class="opcion">
                 <input type="radio" name="${idPregunta}" value="d">
-                D) ${p.opciones?.d || ""}
+                D) ${opD}
             </label>`;
         }
 
