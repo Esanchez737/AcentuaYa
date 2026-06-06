@@ -7,21 +7,124 @@
 <title>Clase Estudiante - Tests</title>
 
 <style>
-body{margin:0;font-family:Arial,sans-serif;background:#f1f3f4;color:#202124}
-.header{background:#0f9d58;color:white;padding:20px}
-.card{background:white;margin:10px;padding:15px;border-radius:12px}
-.activity,.pregunta{padding:12px;margin-top:10px;border-left:5px solid #0f9d58;background:#fafafa;border-radius:8px}
-.badge{display:inline-block;padding:4px 8px;border-radius:10px;background:#e8f5e9;color:#0f9d58}
-.btn{width:100%;border:none;padding:12px;border-radius:8px;background:#0f9d58;color:white;font-size:16px;margin-top:10px}
-.btn-sec{background:#5f6368}
-button:disabled{background:#9aa0a6}
-.oculto{display:none}
-.opcion{display:block;margin:8px 0}
-.resultado{font-size:18px;font-weight:bold;color:#0f9d58}
+body {
+  margin: 0;
+  font-family: "Inter", system-ui, Arial, sans-serif;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #faf9f0 0%, #dff1f8 28%, #c6e1f8 58%, #ebd5f5 100%);
+  color: #111827;
+  position: relative;
+  overflow-x: hidden;
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 14% 14%, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0) 20%),
+    radial-gradient(circle at 80% 12%, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0) 18%),
+    linear-gradient(140deg, rgba(255,255,255,0.62) 0%, rgba(255,255,255,0) 36%),
+    linear-gradient(108deg, rgba(255,255,255,0.48) 0%, rgba(255,255,255,0) 28%);
+  pointer-events: none;
+  z-index: -1;
+  filter: blur(0.8px);
+}
+.container {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 24px 18px 36px;
+  position: relative;
+  z-index: 1;
+}
+.header {
+  background: rgba(255, 255, 255, 0.96);
+  color: #0f172a;
+  padding: 26px 30px;
+  border-radius: 28px;
+  box-shadow: 0 28px 50px rgba(15, 23, 42, 0.12);
+  border: 1px solid rgba(255,255,255,0.8);
+}
+.header h2 {
+  margin: 0;
+  font-size: 32px;
+  letter-spacing: -0.02em;
+}
+.header div {
+  margin-top: 10px;
+  color: #4b5563;
+}
+.card {
+  background: rgba(255, 255, 255, 0.92);
+  margin: 20px 0;
+  padding: 24px;
+  border-radius: 28px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(255,255,255,0.8);
+}
+.activity,
+.pregunta {
+  padding: 18px;
+  margin-top: 16px;
+  border-left: 5px solid #0f9d58;
+  background: rgba(240, 255, 244, 0.94);
+  border-radius: 22px;
+}
+.badge {
+  display: inline-block;
+  padding: 7px 16px;
+  border-radius: 999px;
+  background: #e8f5e9;
+  color: #0f9d58;
+  font-weight: 700;
+}
+.btn {
+  width: 100%;
+  border: none;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #0f9d58;
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  margin-top: 16px;
+  cursor: pointer;
+  transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+  box-shadow: 0 14px 24px rgba(15, 157, 88, 0.18);
+}
+.btn:hover {
+  transform: translateY(-1px);
+}
+.btn-sec {
+  background: #5f6368;
+}
+button:disabled {
+  background: #9aa0a6;
+  cursor: not-allowed;
+}
+.oculto {
+  display: none;
+}
+.opcion {
+  display: block;
+  margin: 10px 0;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+}
+.opcion input {
+  margin-right: 10px;
+}
+.resultado {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f9d58;
+}
 </style>
 </head>
 
 <body>
+<div class="container">
 
 <div class="header">
 <h2 id="nombreClase">Cargando...</h2>
@@ -263,6 +366,7 @@ function volverALista(){
     cargarClase();
 }
 </script>
+</div>
 
 </body>
 </html>
