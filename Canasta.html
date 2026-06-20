@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Canastas de Acentuación</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:#eef3f7;
+  overflow:hidden;
+  -webkit-user-select:none;
+  user-select:none;
+}
+#game{
+  width:100%;
+  height:100dvh;
+  min-height:100svh;
+  position:relative;
+  background:linear-gradient(#dff3ff,#ffffff);
+}
+.header{
+  height:60px;
+  background:#159447;
+  color:white;
+  display:flex;
+  justify-content:space-around;
+  align-items:center;
+  font-size:20px;
+  font-weight:bold;
+}
+#word{
+  position:absolute;
+  top:80px;
+  left:50%;
+  transform:translateX(-50%);
+  background:white;
+  padding:12px 28px;
+  border-radius:15px;
+  font-size:34px;
+  font-weight:bold;
+  box-shadow:0 3px 8px rgba(0,0,0,.25);
+  cursor:grab;
+  user-select:none;
+  touch-action:none;
+}
+.baskets{
+  position:absolute;
+  bottom:15px;
+  left:0;
+  width:100%;
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:8px;
+  padding:8px;
+}
+.basket{
+  min-height:120px;
+  background:white;
+  border:4px dashed #159447;
+  border-radius:18px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  font-weight:bold;
+  font-size:16px;
+}
+.basket .icon{
+  font-size:44px;
+  margin-bottom:5px;
+}
+#message{
+  position:absolute;
+  top:70px;
+  width:100%;
+  text-align:center;
+  font-size:22px;
+  font-weight:bold;
+  color:#159447;
+}
+#gameOver{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,.75);
+  color:white;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  text-align:center;
+  z-index:10;
+}
+#gameOver button{
+  padding:14px 28px;
+  font-size:18px;
+  border:none;
+  border-radius:10px;
+  background:#159447;
+  color:white;
+}
+@media(max-width:600px){
+  .header{
+    height:52px;
+    font-size:15px;
+    padding:0 8px;
+  }
+  #message{
+    top:58px;
+    font-size:16px;
+    padding:0 8px;
+  }
+  #word{
+    top:72px;
+    font-size:26px;
+    padding:10px 18px;
+    max-width:calc(100% - 24px);
+    text-align:center;
+  }
+  .baskets{
+    bottom:6px;
+    gap:6px;
+    padding:6px;
+    grid-template-columns:repeat(2,1fr);
+  }
+  .basket{
+    min-height:88px;
+    font-size:12px;
+    border-width:3px;
+    border-radius:14px;
+  }
+  .basket .icon{font-size:32px}
+}
+</style>
+</head>
+
+<body>
+
+<div id="game">
+
+  <div class="header">
+    <div id="score">Puntaje: 0</div>
+    <div id="lives">Vidas: 3</div>
+  </div>
+
+  <div id="message"></div>
+
+  <div id="word">café</div>
+
+  <div class="baskets">
+    <div class="basket" data-category="aguda">
+      <div class="icon">🧺</div>
+      Agudas
+    </div>
+
+    <div class="basket" data-category="grave">
+      <div class="icon">🧺</div>
+      Graves
+    </div>
+
+    <div class="basket" data-category="esdrujula">
+      <div class="icon">🧺</div>
+      Esdrújulas
+    </div>
+
+    <div class="basket" data-category="sobreesdrujula">
+      <div class="icon">🧺</div>
+      Sobreesdrújulas
+    </div>
+  </div>
+
+  <div id="gameOver">
+    <h1>Juego terminado</h1>
+    <h2 id="finalScore"></h2>
+    <button onclick="reiniciar()">Reiniciar</button>
+  </div>
+
+</div>
+
+<script>
+const palabras = [
+  {texto:"café", categoria:"aguda"},
+  {texto:"papel", categoria:"aguda"},
+  {texto:"reloj", categoria:"aguda"},
+  {texto:"compás", categoria:"aguda"},
+  {texto:"balón", categoria:"aguda"},
+  {texto:"canción", categoria:"aguda"},
+  {texto:"corazón", categoria:"aguda"},
+  {texto:"rubí", categoria:"aguda"},
+  {texto:"menú", categoria:"aguda"},
+  {texto:"sofá", categoria:"aguda"},
+  {texto:"camión", categoria:"aguda"},
+  {texto:"motor", categoria:"aguda"},
+  {texto:"cruzar", categoria:"aguda"},
+  {texto:"jardín", categoria:"aguda"},
+
+  {texto:"mesa", categoria:"grave"},
+  {texto:"fácil", categoria:"grave"},
+  {texto:"lápiz", categoria:"grave"},
+  {texto:"túnel", categoria:"grave"},
+  {texto:"álbum", categoria:"grave"},
+  {texto:"móvil", categoria:"grave"},
+  {texto:"cárcel", categoria:"grave"},
+  {texto:"tórax", categoria:"grave"},
+  {texto:"cóndor", categoria:"grave"},
+  {texto:"mármol", categoria:"grave"},
+  {texto:"dólar", categoria:"grave"},
+  {texto:"tóner", categoria:"grave"},
+  {texto:"azul", categoria:"grave"},
+  {texto:"fútbol", categoria:"grave"},
+
+  {texto:"música", categoria:"esdrujula"},
+  {texto:"pájaro", categoria:"esdrujula"},
+  {texto:"rápido", categoria:"esdrujula"},
+  {texto:"técnico", categoria:"esdrujula"},
+  {texto:"médico", categoria:"esdrujula"},
+  {texto:"fantástico", categoria:"esdrujula"},
+  {texto:"teléfono", categoria:"esdrujula"},
+  {texto:"lámpara", categoria:"esdrujula"},
+  {texto:"película", categoria:"esdrujula"},
+  {texto:"público", categoria:"esdrujula"},
+  {texto:"sílaba", categoria:"esdrujula"},
+  {texto:"próximo", categoria:"esdrujula"},
+  {texto:"cámara", categoria:"esdrujula"},
+  {texto:"mírame", categoria:"esdrujula"},
+
+  {texto:"dígamelo", categoria:"sobreesdrujula"},
+  {texto:"cuéntamelo", categoria:"sobreesdrujula"},
+  {texto:"explícamelo", categoria:"sobreesdrujula"},
+  {texto:"rápidamente", categoria:"sobreesdrujula"},
+  {texto:"explícaselo", categoria:"sobreesdrujula"},
+  {texto:"tráemelo", categoria:"sobreesdrujula"},
+  {texto:"llévaselo", categoria:"sobreesdrujula"},
+  {texto:"repítemelo", categoria:"sobreesdrujula"},
+  {texto:"devuélvemelo", categoria:"sobreesdrujula"},
+  {texto:"mándaselo", categoria:"sobreesdrujula"},
+  {texto:"envíamelo", categoria:"sobreesdrujula"},
+  {texto:"préstamelo", categoria:"sobreesdrujula"},
+  {texto:"entrégaselo", categoria:"sobreesdrujula"},
+  {texto:"pásaselo", categoria:"sobreesdrujula"},
+  {texto:"consíguemelo", categoria:"sobreesdrujula"},
+  {texto:"anúnciamelo", categoria:"sobreesdrujula"}
+];
+
+const word = document.getElementById("word");
+const scoreBox = document.getElementById("score");
+const livesBox = document.getElementById("lives");
+const message = document.getElementById("message");
+const gameOverBox = document.getElementById("gameOver");
+const finalScore = document.getElementById("finalScore");
+
+let actual = null;
+let score = 0;
+let lives = 3;
+let speed = 1.5;
+let dragging = false;
+let offsetX = 0;
+let offsetY = 0;
+let y = 80;
+let x = window.innerWidth / 2;
+let running = true;
+
+function nuevaPalabra(){
+  actual = palabras[Math.floor(Math.random()*palabras.length)];
+  word.textContent = actual.texto;
+  const maxX = Math.max(0, window.innerWidth - 180);
+  x = Math.random() * maxX + 40;
+  y = 80;
+  word.style.left = Math.min(x, maxX) + "px";
+  word.style.top = y + "px";
+  message.textContent = "";
+}
+
+function ajustarPantalla(){
+  const maxX = Math.max(0, window.innerWidth - 180);
+  if(x > maxX) x = maxX;
+  word.style.left = Math.max(0, x) + "px";
+}
+
+function actualizar(){
+  scoreBox.textContent = "Puntaje: " + score;
+  livesBox.textContent = "Vidas: " + lives;
+}
+
+function loop(){
+  if(running && !dragging){
+    y += speed;
+    word.style.top = y + "px";
+
+    const basketTop = document.querySelector(".baskets").getBoundingClientRect().top;
+
+    if(y + word.offsetHeight >= basketTop){
+      perderVida("Se escapó la palabra");
+    }
+  }
+
+  requestAnimationFrame(loop);
+}
+
+function perderVida(msg){
+  lives--;
+  actualizar();
+  message.textContent = msg;
+
+  if(lives <= 0){
+    terminarJuego();
+  }else{
+    setTimeout(nuevaPalabra,500);
+  }
+}
+
+function terminarJuego(){
+  running = false;
+  gameOverBox.style.display = "flex";
+  finalScore.textContent = "Puntaje final: " + score;
+}
+
+function soltar(){
+  if(!dragging) return;
+
+  dragging = false;
+  word.style.cursor = "grab";
+
+  const wordRect = word.getBoundingClientRect();
+  const centerX = wordRect.left + wordRect.width/2;
+  const centerY = wordRect.top + wordRect.height/2;
+
+  let dropped = false;
+
+  document.querySelectorAll(".basket").forEach(basket=>{
+    const r = basket.getBoundingClientRect();
+
+    if(centerX >= r.left && centerX <= r.right && centerY >= r.top && centerY <= r.bottom){
+      dropped = true;
+
+      if(basket.dataset.category === actual.categoria){
+        score++;
+        if(score % 5 === 0) speed += 0.4;
+        actualizar();
+        message.textContent = "¡Correcto!";
+        setTimeout(nuevaPalabra,500);
+      }else{
+        perderVida("Incorrecto");
+      }
+    }
+  });
+
+  if(!dropped){
+    perderVida("No cayó en una canasta");
+  }
+}
+
+word.addEventListener("pointerdown", e=>{
+  dragging = true;
+  word.setPointerCapture(e.pointerId);
+  const r = word.getBoundingClientRect();
+  offsetX = e.clientX - r.left;
+  offsetY = e.clientY - r.top;
+  word.style.cursor = "grabbing";
+});
+
+word.addEventListener("pointermove", e=>{
+  if(!dragging) return;
+
+  x = e.clientX - offsetX + word.offsetWidth/2;
+  y = e.clientY - offsetY;
+
+  word.style.left = x + "px";
+  word.style.top = y + "px";
+});
+
+word.addEventListener("pointerup", soltar);
+word.addEventListener("pointercancel", soltar);
+
+function reiniciar(){
+  score = 0;
+  lives = 3;
+  speed = 1.5;
+  running = true;
+  gameOverBox.style.display = "none";
+  actualizar();
+  nuevaPalabra();
+}
+
+window.addEventListener("resize", ajustarPantalla);
+window.addEventListener("orientationchange", ajustarPantalla);
+
+actualizar();
+nuevaPalabra();
+loop();
+</script>
+
+</body>
+</html>
