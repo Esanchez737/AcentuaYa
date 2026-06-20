@@ -35,8 +35,6 @@ body{
 #word{
   position:absolute;
   top:80px;
-  left:50%;
-  transform:translateX(-50%);
   background:white;
   padding:12px 28px;
   border-radius:15px;
@@ -46,6 +44,14 @@ body{
   cursor:grab;
   user-select:none;
   touch-action:none;
+  z-index:2;
+  transition:transform .15s ease, background .2s ease, box-shadow .2s ease;
+}
+.word-correct{
+  animation: correctPulse .6s ease;
+}
+.word-wrong{
+  animation: wrongShake .5s ease;
 }
 .baskets{
   position:absolute;
@@ -102,6 +108,32 @@ body{
   background:#159447;
   color:white;
 }
+#screenFlash{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:rgba(255,0,0,0);
+  z-index:5;
+}
+@keyframes correctPulse{
+  0% { transform: scale(1); background:#fff; }
+  40% { transform: scale(1.08); background:#d9f7e3; }
+  70% { transform: scale(1.03); background:#8ce5a5; }
+  100% { transform: scale(1); background:#fff; }
+}
+@keyframes wrongShake{
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-6px); }
+  80% { transform: translateX(6px); }
+}
+@keyframes screenFlash{
+  0% { background:rgba(255,0,0,0); }
+  30% { background:rgba(255,0,0,.18); }
+  70% { background:rgba(255,0,0,.08); }
+  100% { background:rgba(255,0,0,0); }
+}
 @media(max-width:600px){
   .header{
     height:52px;
@@ -143,10 +175,12 @@ body{
 
   <div class="header">
     <div id="score">Puntaje: 0</div>
+    <div id="timer">Tiempo: 10</div>
     <div id="lives">Vidas: 3</div>
   </div>
 
   <div id="message"></div>
+  <div id="screenFlash"></div>
 
   <div id="word">café</div>
 
@@ -247,16 +281,20 @@ const palabras = [
 
 const word = document.getElementById("word");
 const scoreBox = document.getElementById("score");
+const timerBox = document.getElementById("timer");
 const livesBox = document.getElementById("lives");
 const message = document.getElementById("message");
+const screenFlash = document.getElementById("screenFlash");
 const gameOverBox = document.getElementById("gameOver");
 const finalScore = document.getElementById("finalScore");
 
 let actual = null;
 let score = 0;
 let lives = 3;
-let speed = 1.5;
+let timeLeft = 10;
+let timerId = null;
 let dragging = false;
+let resolving = false;
 let offsetX = 0;
 let offsetY = 0;
 let y = 80;
@@ -266,41 +304,43 @@ let running = true;
 function nuevaPalabra(){
   actual = palabras[Math.floor(Math.random()*palabras.length)];
   word.textContent = actual.texto;
-  const maxX = Math.max(0, window.innerWidth - 180);
-  x = Math.random() * maxX + 40;
+  resolving = false;
+  timeLeft = 10;
+  timerBox.textContent = "Tiempo: " + timeLeft;
+  if(timerId) clearInterval(timerId);
+  timerId = setInterval(()=>{
+    if(!running || resolving) return;
+    timeLeft--;
+    timerBox.textContent = "Tiempo: " + timeLeft;
+    if(timeLeft <= 0){
+      clearInterval(timerId);
+      perderVida("Se acabó el tiempo");
+    }
+  }, 1000);
+  const maxX = Math.max(0, window.innerWidth - word.offsetWidth);
+  x = Math.max(0, Math.min(maxX, (window.innerWidth - word.offsetWidth) / 2));
   y = 80;
-  word.style.left = Math.min(x, maxX) + "px";
+  word.style.left = x + "px";
   word.style.top = y + "px";
   message.textContent = "";
 }
 
 function ajustarPantalla(){
-  const maxX = Math.max(0, window.innerWidth - 180);
-  if(x > maxX) x = maxX;
-  word.style.left = Math.max(0, x) + "px";
+  const maxX = Math.max(0, window.innerWidth - word.offsetWidth);
+  x = Math.max(0, Math.min(x, maxX));
+  word.style.left = x + "px";
 }
 
 function actualizar(){
   scoreBox.textContent = "Puntaje: " + score;
   livesBox.textContent = "Vidas: " + lives;
-}
-
-function loop(){
-  if(running && !dragging){
-    y += speed;
-    word.style.top = y + "px";
-
-    const basketTop = document.querySelector(".baskets").getBoundingClientRect().top;
-
-    if(y + word.offsetHeight >= basketTop){
-      perderVida("Se escapó la palabra");
-    }
-  }
-
-  requestAnimationFrame(loop);
+  timerBox.textContent = "Tiempo: " + timeLeft;
 }
 
 function perderVida(msg){
+  if(!running || resolving) return;
+  if(timerId) clearInterval(timerId);
+  resolving = true;
   lives--;
   actualizar();
   message.textContent = msg;
@@ -308,18 +348,30 @@ function perderVida(msg){
   if(lives <= 0){
     terminarJuego();
   }else{
-    setTimeout(nuevaPalabra,500);
+    setTimeout(()=>{
+      if(running) {
+        resolving = false;
+        nuevaPalabra();
+      }
+    }, 500);
   }
 }
 
 function terminarJuego(){
   running = false;
+  if(timerId) clearInterval(timerId);
   gameOverBox.style.display = "flex";
   finalScore.textContent = "Puntaje final: " + score;
 }
 
+function activarFlash(){
+  screenFlash.style.animation = "none";
+  void screenFlash.offsetWidth;
+  screenFlash.style.animation = "screenFlash .6s ease";
+}
+
 function soltar(){
-  if(!dragging) return;
+  if(!dragging || !running || !actual) return;
 
   dragging = false;
   word.style.cursor = "grab";
@@ -328,32 +380,55 @@ function soltar(){
   const centerX = wordRect.left + wordRect.width/2;
   const centerY = wordRect.top + wordRect.height/2;
 
-  let dropped = false;
+  let basketCorrecta = null;
 
   document.querySelectorAll(".basket").forEach(basket=>{
     const r = basket.getBoundingClientRect();
+    const overlaps = !(wordRect.right < r.left || wordRect.left > r.right || wordRect.bottom < r.top || wordRect.top > r.bottom);
 
-    if(centerX >= r.left && centerX <= r.right && centerY >= r.top && centerY <= r.bottom){
-      dropped = true;
-
+    if(overlaps){
       if(basket.dataset.category === actual.categoria){
-        score++;
-        if(score % 5 === 0) speed += 0.4;
-        actualizar();
-        message.textContent = "¡Correcto!";
-        setTimeout(nuevaPalabra,500);
-      }else{
-        perderVida("Incorrecto");
+        basketCorrecta = basket;
       }
     }
   });
 
-  if(!dropped){
+  if(basketCorrecta){
+    score++;
+    actualizar();
+    message.textContent = "¡Correcto!";
+    word.classList.remove("word-wrong");
+    word.classList.add("word-correct");
+    resolving = true;
+    setTimeout(()=>{
+      if(running) {
+        word.classList.remove("word-correct");
+        resolving = false;
+        nuevaPalabra();
+      }
+    }, 600);
+  }else if(document.elementFromPoint(centerX, centerY)?.closest(".basket")){
+    word.classList.remove("word-correct");
+    word.classList.add("word-wrong");
+    activarFlash();
+    setTimeout(()=>{
+      word.classList.remove("word-wrong");
+    }, 500);
+    perderVida("Incorrecto");
+  }else{
+    word.classList.remove("word-correct");
+    word.classList.add("word-wrong");
+    activarFlash();
+    setTimeout(()=>{
+      word.classList.remove("word-wrong");
+    }, 500);
     perderVida("No cayó en una canasta");
   }
 }
 
 word.addEventListener("pointerdown", e=>{
+  if(!running || !actual || resolving) return;
+  e.preventDefault();
   dragging = true;
   word.setPointerCapture(e.pointerId);
   const r = word.getBoundingClientRect();
@@ -363,10 +438,14 @@ word.addEventListener("pointerdown", e=>{
 });
 
 word.addEventListener("pointermove", e=>{
-  if(!dragging) return;
+  if(!dragging || !running) return;
+  e.preventDefault();
 
-  x = e.clientX - offsetX + word.offsetWidth/2;
-  y = e.clientY - offsetY;
+  const maxLeft = Math.max(0, window.innerWidth - word.offsetWidth);
+  const maxTop = Math.max(0, window.innerHeight - word.offsetHeight - 140);
+
+  x = Math.min(maxLeft, Math.max(0, e.clientX - offsetX));
+  y = Math.min(maxTop, Math.max(0, e.clientY - offsetY));
 
   word.style.left = x + "px";
   word.style.top = y + "px";
@@ -374,12 +453,16 @@ word.addEventListener("pointermove", e=>{
 
 word.addEventListener("pointerup", soltar);
 word.addEventListener("pointercancel", soltar);
+document.addEventListener("pointerup", soltar);
+document.addEventListener("pointercancel", soltar);
 
 function reiniciar(){
+  if(timerId) clearInterval(timerId);
   score = 0;
   lives = 3;
-  speed = 1.5;
+  timeLeft = 10;
   running = true;
+  resolving = false;
   gameOverBox.style.display = "none";
   actualizar();
   nuevaPalabra();
@@ -390,7 +473,6 @@ window.addEventListener("orientationchange", ajustarPantalla);
 
 actualizar();
 nuevaPalabra();
-loop();
 </script>
 
 </body>
